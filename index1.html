@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Stream</title>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <style>video { max-width: 100%; }</style>
+</head>
+<body>
+    <video id="video" autoplay playsinline></video>
+    
+    <script>
+        const video = document.getElementById('video');
+        const pc = new RTCPeerConnection({
+            iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+        });
+
+        pc.ontrack = (event) => {
+            if (event.track.kind === 'video') {
+                video.srcObject = event.streams[0];
+            }
+        };
+
+        async function start() {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            const response = await fetch('http://192.168.114.240:8000/offer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ offer: pc.localDescription })
+            });
+            
+            const answer = await response.json();
+            await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        }
+
+        start().catch(console.error);
+    </script>
+</body>
+</html>
